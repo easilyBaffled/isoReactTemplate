@@ -4,13 +4,11 @@ var React = require('react');
 React.initializeTouchEvents(true);
 var _ = require('lodash');
 var Style = require('../js/styleConstants.js');
-var Search = require('./search.jsx');
 var UserActions = require('../js/actions/userActions.js');
 var UserStore = require('../js/stores/userStore.js');
 var socket;
 
-function getState(){   
-    console.log("get state has been called")
+function getState(){       
    return {
        User: UserStore.getUserData()
    }
@@ -27,7 +25,7 @@ module.exports = React.createClass({
         var app = this;
         hello.init(
         {	
-           google: '1010401458239-gqa1kobbbolki48fntj70ukjtsl0vct4.apps.googleusercontent.com'
+           google: 'GOOGLE CONFIGURE STRING: https://console.developers.google.com/project?authuser=0'
         }, {        
             redirect_uri: 'http://localhost:3001/'
         }); 
@@ -65,7 +63,7 @@ module.exports = React.createClass({
         }                
         console.log(this.state.User);
         if(this.state.User) {
-            htmlToRender = <div><Search socket={socket}></Search>Hello {this.state.User.name}</div>
+            htmlToRender = <div>Hello {this.state.User.name}</div>
         } else {
             htmlToRender = <button style={logInButton} onClick={this.logInUser} onTouchStart={this.signInUser}> Log In </button>
         }        
