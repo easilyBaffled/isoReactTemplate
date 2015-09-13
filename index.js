@@ -70,11 +70,14 @@ var server =  http.createServer(app).listen(3001, function() {
 });
 var io = socketIO.listen(server)
 io.on('connection', function (socket) {
-  socket.on('logIn', function (data) {
-      User.getUser(data.id, data.name, function (user) {
-        socket.emit('loggedIn', user);        
+  socket.on('logIn', function (data) {      
+      User.getUser(data.id, data.name, function (user) {        
+          socket.emit('loggedIn', user);        
       });      
   });
+    socket.on('searchAvailible', function (data) {
+      console.log(data);   
+    });    
 });
 
 //
