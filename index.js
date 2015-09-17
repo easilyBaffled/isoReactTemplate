@@ -7,7 +7,7 @@ var path = require('path'),
     express = require('express'),
     renderer = require('react-engine'),
     bodyParser = require('body-parser'),
-    mongoose = require('mongoose'),   
+    mongoose = require('mongoose'),
     User = require('./app/models/user'),
     morgan  = require('morgan'),
     http = require('http'),
@@ -29,19 +29,14 @@ var engine = renderer.server.create({
   routesFilePath: path.join(__dirname + '/public/routes.jsx')
 });
 
-// set the engine
 app.engine('.jsx', engine);
 
-// set the view directory
 app.set('views', __dirname + '/public/views');
 
-// set jsx as the view engine
 app.set('view engine', 'jsx');
 
-// finally, set the custom view
 app.set('view', renderer.expressView);
 
-//expose public folder as static assets
 app.use(express.static(__dirname + '/public'));
 
 app.get('/', function(req, res) {
@@ -66,9 +61,9 @@ var server =  http.createServer(app).listen(3001, function() {
 
 var io = socketIO.listen(server);
 io.on('connection', function (socket) {
-  socket.on('logIn', function (data) {      
-      User.getUser(data.id, data.name, function (user) {        
-          socket.emit('loggedIn', user);        
-      });      
-  }); 
+  socket.on('logIn', function (data) {
+      User.getUser(data.id, data.name, function (user) {
+          socket.emit('loggedIn', user);
+      });
+  });
 });
