@@ -1,5 +1,6 @@
 'use strict';
 var webpack = require('webpack');
+var WebpackNotifierPlugin = require('webpack-notifier');
 module.exports = {
 
   entry: [
@@ -9,15 +10,14 @@ module.exports = {
   ],
   output: {
     path: __dirname + '/public',
-    filename: 'bundle.js',    
-  },
-
+    filename: 'bundle.js',
+  },  
   module: {
     loaders: [
       {
         //tell webpack to use jsx-loader for all *.jsx files
         test: /\.jsx$/,
-        loaders: ['react-hot', 'jsx-loader?insertPragma=React.DOM&harmony']        
+        loaders: ['react-hot', 'jsx-loader?insertPragma=React.DOM&harmony']
       },
       {
         test: /\.json$/,
@@ -26,6 +26,7 @@ module.exports = {
     ]
   },
     plugins: [
+      new WebpackNotifierPlugin(),
       new webpack.HotModuleReplacementPlugin()
     ],
   resolve: {

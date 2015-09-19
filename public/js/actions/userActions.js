@@ -1,9 +1,9 @@
 var Flux = require('../utils/mcfly.js');
 var UserActions = Flux.createActions({
-    logInUser: function (socket, userData) {    
-        socket.emit('logIn', {id: userData.id, name: userData.first_name});
+    logInUser: function (socket, userData) {
+        socket.emit('logIn', {id: userData.id});
         return {
-            actionType: "LOGGING_IN",            
+            actionType: "LOGGING_IN",
         }
     },
     loggedInUser: function (userData) {
@@ -12,6 +12,13 @@ var UserActions = Flux.createActions({
             actionType: "USER_LOGGED_IN",
             'userData': userData
         }
-    }   
+    },
+    challengeUser: function (socket, userID, challengedID) {
+      socket.emit('submitChallenge', {id: userID, challengerID: challengedID});
+      return {
+          actionType: "CHALLENGING_USER",
+          'userID': userID
+      }
+    }
 });
 module.exports = UserActions;

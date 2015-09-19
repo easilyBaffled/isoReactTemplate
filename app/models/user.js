@@ -4,39 +4,57 @@ var _ = require('lodash');
 
 var UserSchema = new Schema({
     id: String,
-    name: String,    
+    socketID: String
 });
 
 var User = mongoose.model('User', UserSchema, 'User');
 
-function getUser(userID, name, callback) {
+function getUser(userID, callback) {
     User.findOne({
-        id: userID
+        id: userID,
     },  function (err, user) {
-            if(err) 
+            if(err)
                 console.log("ERROR finding user");
-            if(user) {    
+            if(user) {
                 callback(user);
-            } else {
-                createUser(userID, name, callback);
             }
         }
     )
 }
 
+function logInUser(userID, socketID, callback) {
+    User.findOne({
+        id: userID,
+    },  function (err, user) {
+            if(err)
+                console.log("ERROR finding user");
+            if(user) {
+              user.socketID = socketID;
+              callback(user);
+              user.save(function (err) {
+                  if (err)
+                      res.send(err);
+              });
+            } else {
+                createUser(userID, socketID, callback);
+            }
+        }
+    )
+}
 
-function createUser(userID, name, callback) {    
+function createUser(userID, socketID, callback) {
     var user = new User();
     user.id = userID;
-    user.name = name;       
+    user.socketID = socketID;
     user.save(function (err) {
         if (err)
-            res.send(err);        
+            res.send(err);
         callback(user);
     });
 }
 
 module.exports = {
     'createUser': createUser,
-    'getUser': getUser
+    'getUser': getUser,
+    'logInUser': logInUser
 }

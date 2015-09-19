@@ -8,9 +8,11 @@ var UserActions = require('../js/actions/userActions.js');
 var UserStore = require('../js/stores/userStore.js');
 var socket;
 
-function getState(){       
+function getState(){
    return {
-       User: UserStore.getUserData()
+       User: UserStore.getUserData(),
+       tempID: '',
+       challengedID: ''
    }
 }
 module.exports = React.createClass({
@@ -23,27 +25,28 @@ module.exports = React.createClass({
     },
     componentDidMount: function () {
         var app = this;
-        hello.init(
-        {	
-           google: 'GOOGLE CONFIGURE STRING: https://console.developers.google.com/project?authuser=0'
-        }, {        
-            redirect_uri: 'http://localhost:3001/'
-        }); 
-        socket = io();  
+        socket = io();
         socket.on('loggedIn', function (data) {
-            UserActions.loggedInUser(data);            
-        });       
-    },    
-    logInUser: function () {        
-        hello('google').login().then(function(auth) {
-           hello(auth.network).api('/me').then(function(userResponseData) {
-               UserActions.logInUser(socket, userResponseData);               
-           });
+            UserActions.loggedInUser(data);
+        });
+        socket.on('Challenged', function (data) {
+            console.log(data + "challenged you.")
         });
     },
-
+    logInUser: function () {
+      UserActions.logInUser(socket, {id: this.state.tempID});
+    },
+    updateInputValue: function(inputEvent) {
+      this.setState({tempID: inputEvent.target.value});
+    },
+    challengeUser: function () {
+      UserActions.challengeUser(socket, this.state.challengedID, this.state.User.id);
+    },
+    updateChallengerValue: function(inputEvent) {
+      this.setState({challengedID: inputEvent.target.value});
+    },
     render: function() {
-        var htmlToRender;  
+        var htmlToRender;
         var appContainer = {
             height: '100%',
             width: '100%'
@@ -54,19 +57,28 @@ module.exports = React.createClass({
             WebkitAlignItems: 'flex-start',
             alignItems: 'flex-start',
         });
-        
+
         var logInButton = {
             width: '70%',
             height: '15%',
             margin: '15%',
             fontSize: '8vw'
-        }                
+        }
         console.log(this.state.User);
         if(this.state.User) {
-            htmlToRender = <div>Hello {this.state.User.name}</div>
+            htmlToRender =
+              (<div>
+                  Hello {this.state.User.id}
+                  <input onChange={this.updateChallengerValue} ref="challengerID"></input>
+                  <button onClick={this.challengeUser} onTouchStart={this.challengeUser}> Challenge User </button>
+                </div>)
         } else {
-            htmlToRender = <button style={logInButton} onClick={this.logInUser} onTouchStart={this.signInUser}> Log In </button>
-        }        
+            htmlToRender =
+            (<div>
+              <input onChange={this.updateInputValue} ref="userIdBox"></input>
+              <button style={logInButton} onClick={this.logInUser} onTouchStart={this.logInUser}> Log In </button>
+            </div>)
+        }
         return htmlToRender;
     }
 });

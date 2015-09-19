@@ -11,8 +11,9 @@ var path = require('path'),
     User = require('./app/models/user'),
     morgan  = require('morgan'),
     http = require('http'),
-    socketIO = require('socket.io').listen(3000);
-mongoose.connect('MONGO LAB CONNECTION', function (err){
+    socketIO = require('socket.io').listen(3000),
+    debug = require('./debug.js');
+mongoose.connect('mongodb://dmichaelis0:Baffled00@ds031581.mongolab.com:31581/heroku_app33289668', function (err){
     if(err){console.log("err", err)} else {console.log("mongoose working")}
 });
 var app = express();
@@ -62,8 +63,13 @@ var server =  http.createServer(app).listen(3001, function() {
 var io = socketIO.listen(server);
 io.on('connection', function (socket) {
   socket.on('logIn', function (data) {
-      User.getUser(data.id, data.name, function (user) {
+      User.logInUser(data.id, socket.id, function (user) {
           socket.emit('loggedIn', user);
+      });
+  });
+  socket.on('submitChallenge', function (data) {
+      User.getUser(data.id, function (user) {
+          socket.broadcast.to(user.socketID).emit('Challenged', data.challengerID);
       });
   });
 });
