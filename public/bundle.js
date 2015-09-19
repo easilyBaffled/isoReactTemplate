@@ -54,7 +54,7 @@
 /******/ 	
 /******/ 	
 /******/ 	var hotApplyOnUpdate = true;
-/******/ 	var hotCurrentHash = "cefd646dc97328e0fece"; // eslint-disable-line no-unused-vars
+/******/ 	var hotCurrentHash = "2c30c85d55d706a88b4f"; // eslint-disable-line no-unused-vars
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentParents = []; // eslint-disable-line no-unused-vars
 /******/ 	
@@ -7986,7 +7986,7 @@
 	'use strict';
 
 	var Routes = __webpack_require__(59);
-	var Client = __webpack_require__(289);
+	var Client = __webpack_require__(290);
 
 	// boot options
 	var options = {
@@ -7995,7 +7995,7 @@
 	  // supply a function that can be called
 	  // to resolve the file that was rendered.
 	  viewResolver: function(viewName) {
-	    return __webpack_require__(291)("./" + viewName);
+	    return __webpack_require__(292)("./" + viewName);
 	  }
 	};
 
@@ -30487,89 +30487,121 @@
 	var UserStore = __webpack_require__(286);
 	var RaceStore = __webpack_require__(287);
 	var Notification = __webpack_require__(288);
+	var Race = __webpack_require__(289);
 	var socket;
 
 	function getState(){
-	   return {
-	       User: UserStore.getUserData(),
-	       Challenger: RaceStore.getChallengerID(),
-	       tempID: '',
-	       challengedID: ''
-	   }
+	  return {
+	    User: UserStore.getUserData(),
+	    Race: RaceStore.getRace(),
+	    challenged: RaceStore.getChallengedState(),
+	    tempID: '',
+	    challengedID: '',
+	    raceDistance: 0,
+	    readyUp: false,
+	    racing: false,
+	  }
 	}
 	module.exports = React.createClass({displayName: "module.exports",
-	    mixins: [UserStore.mixin, RaceStore.mixin],
-	    getInitialState: function(){
-	        return getState();
-	    },
-	    storeDidChange: function () {
-	        this.setState(getState());
-	    },
-	    componentDidMount: function () {
-	        var app = this;
-	        socket = io();
-	        socket.on('loggedIn', function (data) {
-	            UserActions.loggedInUser(data);
-	        });
-	        socket.on('Challenged', function (challengerID) {
-	            RaceActions.reciveChallenge(challengerID);
-	        });
-	        socket.on('challengeDeclined', function () {
-	            console.log("Your Challenge Has Been declined");
-	        });
-	        socket.on('RACE', function (challengerID) {
-	            console.log("RACE");
-	        });
-	    },
-	    logInUser: function () {
-	      UserActions.logInUser(socket, {id: this.state.tempID});
-	    },
-	    updateInputValue: function(inputEvent) {
-	      this.setState({tempID: inputEvent.target.value});
-	    },
-	    challengeUser: function () {
-	      UserActions.challengeUser(socket, this.state.challengedID, this.state.User.id);
-	    },
-	    updateChallengerValue: function(inputEvent) {
-	      this.setState({challengedID: inputEvent.target.value});
-	    },
-	    render: function() {
-	        var htmlToRender;
-	        var appContainer = {
-	            height: '100%',
-	            width: '100%'
-	        }
-	        _.assign(appContainer, Style.flexColumn);
-	        _.assign(appContainer, Style.flexCentering);
-	        _.assign(appContainer, {
-	            WebkitAlignItems: 'flex-start',
-	            alignItems: 'flex-start',
-	        });
-
-	        var logInButton = {
-	            width: '70%',
-	            height: '15%',
-	            margin: '15%',
-	            fontSize: '8vw'
-	        }
-	        console.log(this.state.User);
-	        if(this.state.User) {
-	            htmlToRender =
-	              (React.createElement("div", null, 
-	                  "Hello ", this.state.User.id, 
-	                  React.createElement(Notification, {challenger: this.state.Challenger, socket: socket}), 
-	                  React.createElement("input", {onChange: this.updateChallengerValue, ref: "challengerID"}), 
-	                  React.createElement("button", {onClick: this.challengeUser, onTouchStart: this.challengeUser}, " Challenge User ")
-	                ))
-	        } else {
-	            htmlToRender =
-	            (React.createElement("div", null, 
-	              React.createElement("input", {onChange: this.updateInputValue, ref: "userIdBox"}), 
-	              React.createElement("button", {style: logInButton, onClick: this.logInUser, onTouchStart: this.logInUser}, " Log In ")
-	            ))
-	        }
-	        return htmlToRender;
+	  mixins: [UserStore.mixin, RaceStore.mixin],
+	  getInitialState: function(){
+	    return getState();
+	  },
+	  storeDidChange: function () {
+	    this.setState(getState());
+	  },
+	  componentDidMount: function () {
+	    var app = this;
+	    socket = io();
+	    socket.on('loggedIn', function (data) {
+	      UserActions.loggedInUser(data);
+	    });
+	    socket.on('raceCreated', function (race) {
+	      RaceActions.raceCreated(race);
+	    });
+	    socket.on('Challenged', function (raceData) {
+	      RaceActions.reciveChallenge(raceData);
+	    });
+	    socket.on('challengeDeclined', function () {
+	      console.log("Your Challenge Has Been declined");
+	    });
+	    socket.on('readyUp', function () {
+	      app.setState({readyUp: true});
+	    });
+	    socket.on('start', function (race) {
+	      app.setState({Race: race, racing: true});
+	    })
+	  },
+	  logInUser: function () {
+	    UserActions.logInUser(socket, {id: this.state.tempID});
+	  },
+	  updateInputValue: function(inputEvent) {
+	    this.setState({tempID: inputEvent.target.value});
+	  },
+	  challengeUser: function () {
+	    UserActions.challengeUser(socket, this.state.User.id, this.state.challengedID, this.state.raceDistance);
+	  },
+	  updateChallengerValue: function(inputEvent) {
+	    this.setState({challengedID: inputEvent.target.value});
+	  },
+	  updateDistanceValue: function(inputEvent) {
+	    this.setState({raceDistance: inputEvent.target.value});
+	  },
+	  readyUp: function () {
+	    this.setState({readyUp: false});
+	    console.log(this.state.Race);
+	    UserActions.readyUp(socket, this.state.Race);
+	  },
+	  render: function() {
+	    var htmlToRender;
+	    var appContainer = {
+	      height: '100%',
+	      width: '100%'
 	    }
+	    _.assign(appContainer, Style.flexColumn);
+	    _.assign(appContainer, Style.flexCentering);
+	    _.assign(appContainer, {
+	      WebkitAlignItems: 'flex-start',
+	      alignItems: 'flex-start',
+	    });
+
+	    var logInButton = {
+	      width: '70%',
+	      height: '15%',
+	      margin: '15%',
+	      fontSize: '8vw'
+	    }
+
+	    if(this.state.User) {
+	      if(this.state.readyUp) {
+	        htmlToRender =
+	        (React.createElement("div", null, 
+	          React.createElement("button", {onClick: this.readyUp, onTouchStart: this.readyUp}, "Ready Up")
+	        ))
+	      } else if (this.state.racing) {
+	        htmlToRender =
+	        (React.createElement("div", null, 
+	          React.createElement(Race, {race: this.state.Race, user: this.state.User, socket: socket})
+	        ))
+	      } else {
+	        htmlToRender =
+	        (React.createElement("div", null, 
+	          "Hello ", this.state.User.id, 
+	          React.createElement(Notification, {race: this.state.Race, challenged: this.state.challenged, socket: socket}), 
+	          React.createElement("input", {onChange: this.updateChallengerValue, ref: "challengerID"}), 
+	          React.createElement("input", {onChange: this.updateDistanceValue, ref: "distanceInput"}), 
+	          React.createElement("button", {onClick: this.challengeUser, onTouchStart: this.challengeUser}, " Challenge User ")
+	        ))
+	      }
+	    } else {
+	      htmlToRender =
+	      (React.createElement("div", null, 
+	        React.createElement("input", {onChange: this.updateInputValue, ref: "userIdBox"}), 
+	        React.createElement("button", {style: logInButton, onClick: this.logInUser, onTouchStart: this.logInUser}, " Log In ")
+	      ))
+	    }
+	    return htmlToRender;
+	  }
 	});
 
 
@@ -43118,17 +43150,22 @@
 	        }
 	    },
 	    loggedInUser: function (userData) {
-	        console.log("action to register user")
 	        return {
 	            actionType: "USER_LOGGED_IN",
 	            'userData': userData
 	        }
 	    },
-	    challengeUser: function (socket, userID, challengedID) {
-	      socket.emit('submitChallenge', {id: userID, challengerID: challengedID});
+	    challengeUser: function (socket, userID, challengedID, raceDistance) {
+	      socket.emit('submitChallenge', {challenger: userID, challenged: challengedID, raceDistance: raceDistance});
 	      return {
 	          actionType: "CHALLENGING_USER",
 	          'userID': userID
+	      }
+	    },
+	    readyUp: function (socket, race) {
+	      socket.emit("ready", race._id);
+	      return {
+	          actionType: "ANNOUCED_READY",
 	      }
 	    }
 	});
@@ -45231,24 +45268,36 @@
 
 	var Flux = __webpack_require__(268);
 	var RaceActions = Flux.createActions({
-	    reciveChallenge: function (challengerID) {
+	    reciveChallenge: function (raceData) {
 	        return {
 	            actionType: "CHALLENGE_RECIVE",
-	            challengerID: challengerID
+	            raceData: raceData
 	        }
 	    },
-	    acceptChallenge: function (socket, challengerID) {
-	        socket.emit("challengeAccepted", challengerID);
+	    raceCreated: function (raceData) {
+	        return {
+	            actionType: "RACE_CREATED",
+	            raceData: raceData
+	        }
+	    },
+	    acceptChallenge: function (socket, race) {
+	        socket.emit("challengeAccepted", race);
 	        return {
 	            actionType: "CHALLENGE_ACCEPTED",
-	            challengerID: challengerID
+	            race: race
 	        }
 	    },
-	    declineChallenge: function (socket, challengerID) {
-	        socket.emit("challengeDeclined", challengerID);
+	    declineChallenge: function (socket, race) {
+	        socket.emit("challengeDeclined", race.challenger);
 	        return {
 	            actionType: "CHALLENGE_DECLINED",
 	            challengerID: challengerID
+	        }
+	    },
+	    startRaceTracking: function (socket, race) {
+	        socket.emit("startRaceTracking", race);
+	        return {
+	            actionType: "TRACKING_RACE"            
 	        }
 	    }
 	});
@@ -45294,25 +45343,38 @@
 
 	var Flux = __webpack_require__(268);
 	var Dispatcher = Flux.dispatcher;
-	_challenger = '';
-	function setChallenger (userID) {
-	    _challenger = userID;
+	_race = '';
+	_challenged = false;
+	function setRace (race) {
+	    _race = race;
+	}
+	function setChallengedState (state) {
+	    _challenged = state;
 	}
 	var RaceStore = Flux.createStore({
-	    getChallengerID: function () {
-	        return _challenger;
+	    getRace: function () {
+	        return _race;
+	    },
+	    getChallengedState: function () {
+	        return _challenged;
 	    }
 	}, function (payload) {
+	    if (payload.actionType === "RACE_CREATED") {
+	        setRace(payload.raceData)
+	        RaceStore.emitChange();
+	    }
 	    if (payload.actionType === "CHALLENGE_RECIVE") {
-	        setChallenger(payload.challengerID)
+	        setRace(payload.raceData);
+	        setChallengedState(true);
 	        RaceStore.emitChange();
 	    }
 	    if (payload.actionType === "CHALLENGE_DECLINED") {
-	        setChallenger('')
+	        setRace('')
+	        setChallengedState(false);
 	        RaceStore.emitChange();
 	    }
 	    if (payload.actionType === "CHALLENGE_ACCEPTED") {
-	        setChallenger('')
+	        setChallengedState(false);
 	        RaceStore.emitChange();
 	    }
 	});
@@ -45334,16 +45396,16 @@
 
 	module.exports = React.createClass({displayName: "module.exports",
 	    declineChallenge: function () {
-	      RaceActions.declineChallenge(this.props.socket, this.props.challenger);
+	      RaceActions.declineChallenge(this.props.socket, this.props.race);
 	    },
 	    acceptChallenge: function () {
-	      RaceActions.acceptChallenge(this.props.socket, this.props.challenger);
+	      RaceActions.acceptChallenge(this.props.socket, this.props.race);
 	    },
 	    render: function() {
 	        var htmlToRender = '';
-	        if(this.props.challenger) {
+	        if(this.props.challenged) {
 	          htmlToRender = (React.createElement("div", null, 
-	                            this.props.challenger, " Wants To Race", 
+	                            this.props.race.challenger, " Wants To Race", 
 	                            React.createElement("button", {onClick: this.acceptChallenge, onTouchStart: this.acceptChallenge}, "Accept"), 
 	                            React.createElement("button", {onClick: this.declineChallenge, onTouchStart: this.declineChallenge}, "Decline")
 	                          ))
@@ -45360,6 +45422,77 @@
 
 /***/ },
 /* 289 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(module) {/* REACT HOT LOADER */ if (true) { (function () { var ReactHotAPI = __webpack_require__(60), RootInstanceProvider = __webpack_require__(68), ReactMount = __webpack_require__(70), React = __webpack_require__(107); module.makeHot = module.hot.data ? module.hot.data.makeHot : ReactHotAPI(function () { return RootInstanceProvider.getRootInstances(ReactMount); }, React); })(); } try { (function () {
+
+	/** @jsx React.DOM */'use strict';
+
+	var React = __webpack_require__(107);
+	var _ = __webpack_require__(264);
+	var Style = __webpack_require__(265);
+	var RaceActions = __webpack_require__(285);
+	var RaceStore = __webpack_require__(287);
+
+	function getState(){
+	  return {
+	    countdownTime: 8
+	    ,
+	    currentDistance: 0
+	  }
+	}
+	module.exports = React.createClass({displayName: "module.exports",
+	  getInitialState: function(){
+	    return getState();
+	  },
+	  componentDidMount: function () {
+	    var fanFareAudio = new Audio('../marioKart.mp3');
+	    //fanFareAudio.play();
+	    this.countdown(this.props.race.startTime);
+	  },
+	  countdown: function (endTime) {
+	    var app = this;
+	    var interval = setInterval(function() {
+	      var current = new Date().getTime();
+	      var diff = (endTime - new Date().getTime())/1000
+	      if(diff > 0) {
+	          app.setState({countdownTime: Math.round(diff)});
+	      } else {
+	        clearInterval(interval);
+	        app.startRaceTracking();
+	        app.setState({countdownTime: ''});
+	      }
+	    }, 500);
+	  },
+	  startRaceTracking: function () {
+	    if(this.props.user.id === this.props.race.challenger) {
+	      RaceActions.startRaceTracking(this.props.socket, this.props.Race);
+	    }
+	  },
+	  render: function() {
+	    var htmlToRender = ''
+	    if(this.state.countdownTime) {
+	      htmlToRender =
+	      (React.createElement("div", null, 
+	        "GET READY", 
+	        React.createElement("div", null, this.state.countdownTime)
+	      ))
+	    } else {
+	      htmlToRender =
+	      (React.createElement("div", null, 
+	        "START!!!"
+	      ))
+	    }
+	    return htmlToRender;
+	  }
+	});
+
+
+	/* REACT HOT LOADER */ }).call(this); } finally { if (true) { (function () { var foundReactClasses = module.hot.data && module.hot.data.foundReactClasses || false; if (module.exports && module.makeHot) { var makeExportsHot = __webpack_require__(260); if (makeExportsHot(module, __webpack_require__(107))) { foundReactClasses = true; } var shouldAcceptModule = true && foundReactClasses; if (shouldAcceptModule) { module.hot.accept(function (err) { if (err) { console.error("Cannot not apply hot update to " + "race.jsx" + ": " + err.message); } }); } } module.hot.dispose(function (data) { data.makeHot = module.makeHot; data.foundReactClasses = foundReactClasses; }); })(); } }
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(33)(module)))
+
+/***/ },
+/* 290 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*-------------------------------------------------------------------------------------------------------------------*\
@@ -45380,7 +45513,7 @@
 	'use strict';
 
 	var React = __webpack_require__(107);
-	var Config = __webpack_require__(290);
+	var Config = __webpack_require__(291);
 	var Router = __webpack_require__(217);
 
 	// declaring like this helps in unit test
@@ -45448,7 +45581,7 @@
 
 
 /***/ },
-/* 290 */
+/* 291 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -45465,12 +45598,12 @@
 	};
 
 /***/ },
-/* 291 */
+/* 292 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var map = {
-		"./404": 292,
-		"./404.jsx": 292,
+		"./404": 293,
+		"./404.jsx": 293,
 		"./app": 258,
 		"./app.jsx": 258,
 		"./home": 263,
@@ -45478,7 +45611,9 @@
 		"./layout": 259,
 		"./layout.jsx": 259,
 		"./notification": 288,
-		"./notification.jsx": 288
+		"./notification.jsx": 288,
+		"./race": 289,
+		"./race.jsx": 289
 	};
 	function webpackContext(req) {
 		return __webpack_require__(webpackContextResolve(req));
@@ -45491,11 +45626,11 @@
 	};
 	webpackContext.resolve = webpackContextResolve;
 	module.exports = webpackContext;
-	webpackContext.id = 291;
+	webpackContext.id = 292;
 
 
 /***/ },
-/* 292 */
+/* 293 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(module) {/* REACT HOT LOADER */ if (true) { (function () { var ReactHotAPI = __webpack_require__(60), RootInstanceProvider = __webpack_require__(68), ReactMount = __webpack_require__(70), React = __webpack_require__(107); module.makeHot = module.hot.data ? module.hot.data.makeHot : ReactHotAPI(function () { return RootInstanceProvider.getRootInstances(ReactMount); }, React); })(); } try { (function () {

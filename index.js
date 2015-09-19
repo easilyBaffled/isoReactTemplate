@@ -4,17 +4,19 @@
 require('node-jsx').install();
 
 var path = require('path'),
-    express = require('express'),
-    renderer = require('react-engine'),
-    bodyParser = require('body-parser'),
-    mongoose = require('mongoose'),
-    User = require('./app/models/user'),
-    morgan  = require('morgan'),
-    http = require('http'),
-    socketIO = require('socket.io').listen(3000),
-    debug = require('./debug.js');
+request = require("request"),
+express = require('express'),
+renderer = require('react-engine'),
+bodyParser = require('body-parser'),
+mongoose = require('mongoose'),
+User = require('./app/models/user'),
+Race = require('./app/models/race'),
+morgan  = require('morgan'),
+http = require('http'),
+socketIO = require('socket.io').listen(3000),
+debug = require('./debug.js');
 mongoose.connect('mongodb://dmichaelis0:Baffled00@ds031581.mongolab.com:31581/heroku_app33289668', function (err){
-    if(err){console.log("err", err)} else {console.log("mongoose working")}
+  if(err){console.log("err", err)} else {console.log("mongoose working")}
 });
 var app = express();
 
@@ -22,7 +24,7 @@ app.use(morgan('dev'));
 // create the view engine with `react-engine`
 
 app.use(bodyParser.urlencoded({
-    extended: true
+  extended: true
 }));
 app.use(bodyParser.json());
 var engine = renderer.server.create({
@@ -63,21 +65,64 @@ var server =  http.createServer(app).listen(3001, function() {
 var io = socketIO.listen(server);
 io.on('connection', function (socket) {
   socket.on('logIn', function (data) {
-      User.logInUser(data.id, socket.id, function (user) {
-          socket.emit('loggedIn', user);
-      });
+    User.logInUser(data.id, socket.id, function (user) {
+      socket.emit('loggedIn', user);
+    });
   });
-  socket.on('submitChallenge', function (data) {
-      User.getUser(data.id, function (user) {
-          socket.broadcast.to(user.socketID).emit('Challenged', data.challengerID);
+  socket.on('submitChallenge', function (raceData) {
+    User.getUser(raceData.challenged, function (user) {
+      Race.createRace(raceData.challenger, raceData.challenged, raceData.raceDistance, function (race) {
+        socket.broadcast.to(user.socketID).emit('Challenged', race);
+        socket.emit("raceCreated", race);
       });
+
+    });
   });
   socket.on("challengeDeclined", function (challengerID) {
     User.getUser(challengerID, function (user) {
-        socket.broadcast.to(user.socketID).emit('challengeDeclined');
+      socket.broadcast.to(user.socketID).emit('challengeDeclined');
     });
   });
-  socket.on("challengeAccepted", function () {
-    io.sockets.emit("RACE");
+  socket.on("challengeAccepted", function (race) {
+    io.sockets.emit("readyUp");
   });
+  socket.on("startRaceTracking", function (race) {
+    trackRace(race, new Date());
+  });
+  socket.on("ready", function (raceID) {
+    Race.readyUp(raceID, function (race) {
+      if(race.readyCount > 1) {
+        var startTime = new Date();
+        startTime.setSeconds(startTime.getSeconds() + 8);
+        startTime = startTime.getTime();
+        console.log("startTime", startTime)
+        Race.setRaceTime(raceID, startTime, function (race) {
+          io.sockets.emit("start", race);
+        });
+      }
+    })
+  })
 });
+function getGPSData (userId, time, callBack) {
+  var url = generateURL(userId, time);
+  console.log(url)
+  request(url, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      callBack(JSON.parse(body));
+    } else {
+      console.log("SOMETHING BROKE")
+    }
+  });
+}
+function generateURL (userId, time) {
+  var startTime = new Date(time);
+  var endTime = new Date(time);
+  startTime.setSeconds(endTime.getSeconds() - 4);
+  return 'http://167.114.68.68:8080/gps/?station='+ userId +'&start='+ startTime.toISOString().replace(/\.\d\d\dZ/g, '').replace(/T/g, '%20') +'&end='+ endTime.toISOString().replace(/\.\d\d\dZ/g, '').replace(/T/g, '%20');
+}
+function trackRace(race, time) {
+  getGPSData(2, new Date('2015-09-19T16:12:23'), function (data) {
+    console.log(data);
+  });
+}
+trackRace('', '');

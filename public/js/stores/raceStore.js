@@ -1,24 +1,37 @@
 var Flux = require('../utils/mcfly.js');
 var Dispatcher = Flux.dispatcher;
-_challenger = '';
-function setChallenger (userID) {
-    _challenger = userID;
+_race = '';
+_challenged = false;
+function setRace (race) {
+    _race = race;
+}
+function setChallengedState (state) {
+    _challenged = state;
 }
 var RaceStore = Flux.createStore({
-    getChallengerID: function () {
-        return _challenger;
+    getRace: function () {
+        return _race;
+    },
+    getChallengedState: function () {
+        return _challenged;
     }
 }, function (payload) {
+    if (payload.actionType === "RACE_CREATED") {
+        setRace(payload.raceData)
+        RaceStore.emitChange();
+    }
     if (payload.actionType === "CHALLENGE_RECIVE") {
-        setChallenger(payload.challengerID)
+        setRace(payload.raceData);
+        setChallengedState(true);
         RaceStore.emitChange();
     }
     if (payload.actionType === "CHALLENGE_DECLINED") {
-        setChallenger('')
+        setRace('')
+        setChallengedState(false);
         RaceStore.emitChange();
     }
     if (payload.actionType === "CHALLENGE_ACCEPTED") {
-        setChallenger('')
+        setChallengedState(false);
         RaceStore.emitChange();
     }
 });

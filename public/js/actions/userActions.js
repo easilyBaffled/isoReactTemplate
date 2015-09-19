@@ -7,17 +7,22 @@ var UserActions = Flux.createActions({
         }
     },
     loggedInUser: function (userData) {
-        console.log("action to register user")
         return {
             actionType: "USER_LOGGED_IN",
             'userData': userData
         }
     },
-    challengeUser: function (socket, userID, challengedID) {
-      socket.emit('submitChallenge', {id: userID, challengerID: challengedID});
+    challengeUser: function (socket, userID, challengedID, raceDistance) {
+      socket.emit('submitChallenge', {challenger: userID, challenged: challengedID, raceDistance: raceDistance});
       return {
           actionType: "CHALLENGING_USER",
           'userID': userID
+      }
+    },
+    readyUp: function (socket, race) {
+      socket.emit("ready", race._id);
+      return {
+          actionType: "ANNOUCED_READY",
       }
     }
 });

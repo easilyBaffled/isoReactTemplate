@@ -1,23 +1,35 @@
 var Flux = require('../utils/mcfly.js');
 var RaceActions = Flux.createActions({
-    reciveChallenge: function (challengerID) {
+    reciveChallenge: function (raceData) {
         return {
             actionType: "CHALLENGE_RECIVE",
-            challengerID: challengerID
+            raceData: raceData
         }
     },
-    acceptChallenge: function (socket, challengerID) {
-        socket.emit("challengeAccepted", challengerID);
+    raceCreated: function (raceData) {
+        return {
+            actionType: "RACE_CREATED",
+            raceData: raceData
+        }
+    },
+    acceptChallenge: function (socket, race) {
+        socket.emit("challengeAccepted", race);
         return {
             actionType: "CHALLENGE_ACCEPTED",
-            challengerID: challengerID
+            race: race
         }
     },
-    declineChallenge: function (socket, challengerID) {
-        socket.emit("challengeDeclined", challengerID);
+    declineChallenge: function (socket, race) {
+        socket.emit("challengeDeclined", race.challenger);
         return {
             actionType: "CHALLENGE_DECLINED",
             challengerID: challengerID
+        }
+    },
+    startRaceTracking: function (socket, race) {
+        socket.emit("startRaceTracking", race);
+        return {
+            actionType: "TRACKING_RACE"            
         }
     }
 });
