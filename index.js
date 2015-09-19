@@ -72,4 +72,12 @@ io.on('connection', function (socket) {
           socket.broadcast.to(user.socketID).emit('Challenged', data.challengerID);
       });
   });
+  socket.on("challengeDeclined", function (challengerID) {
+    User.getUser(challengerID, function (user) {
+        socket.broadcast.to(user.socketID).emit('challengeDeclined');
+    });
+  });
+  socket.on("challengeAccepted", function () {
+    io.sockets.emit("RACE");
+  });
 });

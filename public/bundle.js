@@ -54,7 +54,7 @@
 /******/ 	
 /******/ 	
 /******/ 	var hotApplyOnUpdate = true;
-/******/ 	var hotCurrentHash = "4543d216a3744974b069"; // eslint-disable-line no-unused-vars
+/******/ 	var hotCurrentHash = "cefd646dc97328e0fece"; // eslint-disable-line no-unused-vars
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentParents = []; // eslint-disable-line no-unused-vars
 /******/ 	
@@ -7986,7 +7986,7 @@
 	'use strict';
 
 	var Routes = __webpack_require__(59);
-	var Client = __webpack_require__(286);
+	var Client = __webpack_require__(289);
 
 	// boot options
 	var options = {
@@ -7995,7 +7995,7 @@
 	  // supply a function that can be called
 	  // to resolve the file that was rendered.
 	  viewResolver: function(viewName) {
-	    return __webpack_require__(288)("./" + viewName);
+	    return __webpack_require__(291)("./" + viewName);
 	  }
 	};
 
@@ -30483,18 +30483,22 @@
 	var _ = __webpack_require__(264);
 	var Style = __webpack_require__(265);
 	var UserActions = __webpack_require__(267);
-	var UserStore = __webpack_require__(285);
+	var RaceActions = __webpack_require__(285);
+	var UserStore = __webpack_require__(286);
+	var RaceStore = __webpack_require__(287);
+	var Notification = __webpack_require__(288);
 	var socket;
 
 	function getState(){
 	   return {
 	       User: UserStore.getUserData(),
+	       Challenger: RaceStore.getChallengerID(),
 	       tempID: '',
 	       challengedID: ''
 	   }
 	}
 	module.exports = React.createClass({displayName: "module.exports",
-	    mixins: [UserStore.mixin],
+	    mixins: [UserStore.mixin, RaceStore.mixin],
 	    getInitialState: function(){
 	        return getState();
 	    },
@@ -30507,8 +30511,14 @@
 	        socket.on('loggedIn', function (data) {
 	            UserActions.loggedInUser(data);
 	        });
-	        socket.on('Challenged', function (data) {
-	            console.log(data + "challenged you.")
+	        socket.on('Challenged', function (challengerID) {
+	            RaceActions.reciveChallenge(challengerID);
+	        });
+	        socket.on('challengeDeclined', function () {
+	            console.log("Your Challenge Has Been declined");
+	        });
+	        socket.on('RACE', function (challengerID) {
+	            console.log("RACE");
 	        });
 	    },
 	    logInUser: function () {
@@ -30547,6 +30557,7 @@
 	            htmlToRender =
 	              (React.createElement("div", null, 
 	                  "Hello ", this.state.User.id, 
+	                  React.createElement(Notification, {challenger: this.state.Challenger, socket: socket}), 
 	                  React.createElement("input", {onChange: this.updateChallengerValue, ref: "challengerID"}), 
 	                  React.createElement("button", {onClick: this.challengeUser, onTouchStart: this.challengeUser}, " Challenge User ")
 	                ))
@@ -45219,6 +45230,36 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var Flux = __webpack_require__(268);
+	var RaceActions = Flux.createActions({
+	    reciveChallenge: function (challengerID) {
+	        return {
+	            actionType: "CHALLENGE_RECIVE",
+	            challengerID: challengerID
+	        }
+	    },
+	    acceptChallenge: function (socket, challengerID) {
+	        socket.emit("challengeAccepted", challengerID);
+	        return {
+	            actionType: "CHALLENGE_ACCEPTED",
+	            challengerID: challengerID
+	        }
+	    },
+	    declineChallenge: function (socket, challengerID) {
+	        socket.emit("challengeDeclined", challengerID);
+	        return {
+	            actionType: "CHALLENGE_DECLINED",
+	            challengerID: challengerID
+	        }
+	    }
+	});
+	module.exports = RaceActions;
+
+
+/***/ },
+/* 286 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Flux = __webpack_require__(268);
 	var Dispatcher = Flux.dispatcher;
 	_user = '';
 	function setLoggedInUser (userData) {
@@ -45248,7 +45289,77 @@
 
 
 /***/ },
-/* 286 */
+/* 287 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Flux = __webpack_require__(268);
+	var Dispatcher = Flux.dispatcher;
+	_challenger = '';
+	function setChallenger (userID) {
+	    _challenger = userID;
+	}
+	var RaceStore = Flux.createStore({
+	    getChallengerID: function () {
+	        return _challenger;
+	    }
+	}, function (payload) {
+	    if (payload.actionType === "CHALLENGE_RECIVE") {
+	        setChallenger(payload.challengerID)
+	        RaceStore.emitChange();
+	    }
+	    if (payload.actionType === "CHALLENGE_DECLINED") {
+	        setChallenger('')
+	        RaceStore.emitChange();
+	    }
+	    if (payload.actionType === "CHALLENGE_ACCEPTED") {
+	        setChallenger('')
+	        RaceStore.emitChange();
+	    }
+	});
+	module.exports = RaceStore;
+
+
+/***/ },
+/* 288 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(module) {/* REACT HOT LOADER */ if (true) { (function () { var ReactHotAPI = __webpack_require__(60), RootInstanceProvider = __webpack_require__(68), ReactMount = __webpack_require__(70), React = __webpack_require__(107); module.makeHot = module.hot.data ? module.hot.data.makeHot : ReactHotAPI(function () { return RootInstanceProvider.getRootInstances(ReactMount); }, React); })(); } try { (function () {
+
+	/** @jsx React.DOM */'use strict';
+
+	var React = __webpack_require__(107);
+	var _ = __webpack_require__(264);
+	var Style = __webpack_require__(265);
+	var RaceActions = __webpack_require__(285);
+
+	module.exports = React.createClass({displayName: "module.exports",
+	    declineChallenge: function () {
+	      RaceActions.declineChallenge(this.props.socket, this.props.challenger);
+	    },
+	    acceptChallenge: function () {
+	      RaceActions.acceptChallenge(this.props.socket, this.props.challenger);
+	    },
+	    render: function() {
+	        var htmlToRender = '';
+	        if(this.props.challenger) {
+	          htmlToRender = (React.createElement("div", null, 
+	                            this.props.challenger, " Wants To Race", 
+	                            React.createElement("button", {onClick: this.acceptChallenge, onTouchStart: this.acceptChallenge}, "Accept"), 
+	                            React.createElement("button", {onClick: this.declineChallenge, onTouchStart: this.declineChallenge}, "Decline")
+	                          ))
+	        } else {
+	          htmlToRender = React.createElement("div", null)
+	        }
+	        return htmlToRender;
+	    }
+	});
+
+
+	/* REACT HOT LOADER */ }).call(this); } finally { if (true) { (function () { var foundReactClasses = module.hot.data && module.hot.data.foundReactClasses || false; if (module.exports && module.makeHot) { var makeExportsHot = __webpack_require__(260); if (makeExportsHot(module, __webpack_require__(107))) { foundReactClasses = true; } var shouldAcceptModule = true && foundReactClasses; if (shouldAcceptModule) { module.hot.accept(function (err) { if (err) { console.error("Cannot not apply hot update to " + "notification.jsx" + ": " + err.message); } }); } } module.hot.dispose(function (data) { data.makeHot = module.makeHot; data.foundReactClasses = foundReactClasses; }); })(); } }
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(33)(module)))
+
+/***/ },
+/* 289 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*-------------------------------------------------------------------------------------------------------------------*\
@@ -45269,7 +45380,7 @@
 	'use strict';
 
 	var React = __webpack_require__(107);
-	var Config = __webpack_require__(287);
+	var Config = __webpack_require__(290);
 	var Router = __webpack_require__(217);
 
 	// declaring like this helps in unit test
@@ -45337,7 +45448,7 @@
 
 
 /***/ },
-/* 287 */
+/* 290 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -45354,18 +45465,20 @@
 	};
 
 /***/ },
-/* 288 */
+/* 291 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var map = {
-		"./404": 289,
-		"./404.jsx": 289,
+		"./404": 292,
+		"./404.jsx": 292,
 		"./app": 258,
 		"./app.jsx": 258,
 		"./home": 263,
 		"./home.jsx": 263,
 		"./layout": 259,
-		"./layout.jsx": 259
+		"./layout.jsx": 259,
+		"./notification": 288,
+		"./notification.jsx": 288
 	};
 	function webpackContext(req) {
 		return __webpack_require__(webpackContextResolve(req));
@@ -45378,11 +45491,11 @@
 	};
 	webpackContext.resolve = webpackContextResolve;
 	module.exports = webpackContext;
-	webpackContext.id = 288;
+	webpackContext.id = 291;
 
 
 /***/ },
-/* 289 */
+/* 292 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(module) {/* REACT HOT LOADER */ if (true) { (function () { var ReactHotAPI = __webpack_require__(60), RootInstanceProvider = __webpack_require__(68), ReactMount = __webpack_require__(70), React = __webpack_require__(107); module.makeHot = module.hot.data ? module.hot.data.makeHot : ReactHotAPI(function () { return RootInstanceProvider.getRootInstances(ReactMount); }, React); })(); } try { (function () {

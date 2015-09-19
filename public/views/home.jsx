@@ -5,18 +5,22 @@ React.initializeTouchEvents(true);
 var _ = require('lodash');
 var Style = require('../js/styleConstants.js');
 var UserActions = require('../js/actions/userActions.js');
+var RaceActions = require('../js/actions/raceActions.js');
 var UserStore = require('../js/stores/userStore.js');
+var RaceStore = require('../js/stores/raceStore.js');
+var Notification = require('./notification.jsx');
 var socket;
 
 function getState(){
    return {
        User: UserStore.getUserData(),
+       Challenger: RaceStore.getChallengerID(),
        tempID: '',
        challengedID: ''
    }
 }
 module.exports = React.createClass({
-    mixins: [UserStore.mixin],
+    mixins: [UserStore.mixin, RaceStore.mixin],
     getInitialState: function(){
         return getState();
     },
@@ -29,8 +33,14 @@ module.exports = React.createClass({
         socket.on('loggedIn', function (data) {
             UserActions.loggedInUser(data);
         });
-        socket.on('Challenged', function (data) {
-            console.log(data + "challenged you.")
+        socket.on('Challenged', function (challengerID) {
+            RaceActions.reciveChallenge(challengerID);
+        });
+        socket.on('challengeDeclined', function () {
+            console.log("Your Challenge Has Been declined");
+        });
+        socket.on('RACE', function (challengerID) {
+            console.log("RACE");
         });
     },
     logInUser: function () {
@@ -69,6 +79,7 @@ module.exports = React.createClass({
             htmlToRender =
               (<div>
                   Hello {this.state.User.id}
+                  <Notification challenger={this.state.Challenger} socket={socket}></Notification>
                   <input onChange={this.updateChallengerValue} ref="challengerID"></input>
                   <button onClick={this.challengeUser} onTouchStart={this.challengeUser}> Challenge User </button>
                 </div>)
