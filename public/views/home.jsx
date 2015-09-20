@@ -47,6 +47,11 @@ module.exports = React.createClass({
     socket.on('challengeDeclined', function () {
       console.log("Your Challenge Has Been declined");
     });
+
+    socket.on('raceCreatedAndReadyUp', function (race) {
+      app.setState({readyUp: true});
+      RaceActions.raceCreated(race);
+    });
     socket.on('readyUp', function () {
       app.setState({readyUp: true});
     });
@@ -61,7 +66,11 @@ module.exports = React.createClass({
     this.setState({tempID: inputEvent.target.value});
   },
   challengeUser: function () {
-    UserActions.challengeUser(socket, this.state.User.id, this.state.challengedID, this.state.raceDistance);
+    if(this.state.challengedID === "ghost") {
+      UserActions.challengeGhost(socket, this.state.User.id, this.state.challengedID, this.state.raceDistance);
+    } else {
+        UserActions.challengeUser(socket, this.state.User.id, this.state.challengedID, this.state.raceDistance);
+    }
   },
   updateChallengerValue: function(inputEvent) {
     this.setState({challengedID: inputEvent.target.value});

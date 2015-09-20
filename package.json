@@ -28,6 +28,7 @@
     "morgan": "~1.0.0",
     "node-jsx": "^0.12.4",
     "nodemailer": "^1.4.0",
+    "promise": "^7.0.4",
     "react": "^0.12.2",
     "react-engine": "^2.0.0",
     "react-prefixr": "^0.1.0",

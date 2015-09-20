@@ -12,6 +12,13 @@ var UserActions = Flux.createActions({
             'userData': userData
         }
     },
+    challengeGhost: function (socket, userID, challengedID, raceDistance) {
+      socket.emit('challengeGhost', {challenger: userID, challenged: challengedID, raceDistance: raceDistance});
+      return {
+          actionType: "CHALLENGING_GHOST",
+          'userID': userID
+      }
+    },
     challengeUser: function (socket, userID, challengedID, raceDistance) {
       socket.emit('submitChallenge', {challenger: userID, challenged: challengedID, raceDistance: raceDistance});
       return {
@@ -20,6 +27,7 @@ var UserActions = Flux.createActions({
       }
     },
     readyUp: function (socket, race) {
+      console.log(race)
       socket.emit("ready", race._id);
       return {
           actionType: "ANNOUCED_READY",

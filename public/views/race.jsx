@@ -42,7 +42,21 @@ module.exports = React.createClass({
     }
   },
   render: function() {
-    var htmlToRender = ''
+    var htmlToRender = '';
+    var runner = {
+        width: '15vh',
+        height: '15vh',
+    };
+    var lable = {
+      fontSize: '20px',
+      display: 'inline-block'
+    };
+    var amount = {
+      width: '12vh',
+      height: '12vh',
+      border: Style.borderGen('1px', 'green'),
+      display: 'inline-block'
+    };
     if(this.state.countdownTime) {
       htmlToRender =
       (<div>
@@ -53,6 +67,10 @@ module.exports = React.createClass({
       htmlToRender =
       (<div>
         START!!!
+        <div style={runner}>
+          <div style={lable}>Runner 1 </div>
+          <div style={amount}>1.2m</div>
+        </div>
       </div>)
     }
     return htmlToRender;

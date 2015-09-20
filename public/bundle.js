@@ -54,7 +54,7 @@
 /******/ 	
 /******/ 	
 /******/ 	var hotApplyOnUpdate = true;
-/******/ 	var hotCurrentHash = "2c30c85d55d706a88b4f"; // eslint-disable-line no-unused-vars
+/******/ 	var hotCurrentHash = "50be6de0b6bf271464e8"; // eslint-disable-line no-unused-vars
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentParents = []; // eslint-disable-line no-unused-vars
 /******/ 	
@@ -30525,6 +30525,11 @@
 	    socket.on('challengeDeclined', function () {
 	      console.log("Your Challenge Has Been declined");
 	    });
+
+	    socket.on('raceCreatedAndReadyUp', function (race) {
+	      app.setState({readyUp: true});
+	      RaceActions.raceCreated(race);
+	    });
 	    socket.on('readyUp', function () {
 	      app.setState({readyUp: true});
 	    });
@@ -30539,7 +30544,11 @@
 	    this.setState({tempID: inputEvent.target.value});
 	  },
 	  challengeUser: function () {
-	    UserActions.challengeUser(socket, this.state.User.id, this.state.challengedID, this.state.raceDistance);
+	    if(this.state.challengedID === "ghost") {
+	      UserActions.challengeGhost(socket, this.state.User.id, this.state.challengedID, this.state.raceDistance);
+	    } else {
+	        UserActions.challengeUser(socket, this.state.User.id, this.state.challengedID, this.state.raceDistance);
+	    }
 	  },
 	  updateChallengerValue: function(inputEvent) {
 	    this.setState({challengedID: inputEvent.target.value});
@@ -43155,6 +43164,13 @@
 	            'userData': userData
 	        }
 	    },
+	    challengeGhost: function (socket, userID, challengedID, raceDistance) {
+	      socket.emit('challengeGhost', {challenger: userID, challenged: challengedID, raceDistance: raceDistance});
+	      return {
+	          actionType: "CHALLENGING_GHOST",
+	          'userID': userID
+	      }
+	    },
 	    challengeUser: function (socket, userID, challengedID, raceDistance) {
 	      socket.emit('submitChallenge', {challenger: userID, challenged: challengedID, raceDistance: raceDistance});
 	      return {
@@ -43163,6 +43179,7 @@
 	      }
 	    },
 	    readyUp: function (socket, race) {
+	      console.log(race)
 	      socket.emit("ready", race._id);
 	      return {
 	          actionType: "ANNOUCED_READY",
@@ -45470,7 +45487,21 @@
 	    }
 	  },
 	  render: function() {
-	    var htmlToRender = ''
+	    var htmlToRender = '';
+	    var runner = {
+	        width: '15vh',
+	        height: '15vh',
+	    };
+	    var lable = {
+	      fontSize: '20px',
+	      display: 'inline-block'
+	    };
+	    var amount = {
+	      width: '12vh',
+	      height: '12vh',
+	      border: Style.borderGen('1px', 'green'),
+	      display: 'inline-block'
+	    };
 	    if(this.state.countdownTime) {
 	      htmlToRender =
 	      (React.createElement("div", null, 
@@ -45480,7 +45511,11 @@
 	    } else {
 	      htmlToRender =
 	      (React.createElement("div", null, 
-	        "START!!!"
+	        "START!!!", 
+	        React.createElement("div", {style: runner}, 
+	          React.createElement("div", {style: lable}, "Runner 1 "), 
+	          React.createElement("div", {style: amount}, "1.2m")
+	        )
 	      ))
 	    }
 	    return htmlToRender;
