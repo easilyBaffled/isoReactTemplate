@@ -30,6 +30,7 @@ module.exports = React.createClass({
       if(diff > 0) {
           app.setState({countdownTime: Math.round(diff)});
       } else {
+        console.log("==============")
         clearInterval(interval);
         app.startRaceTracking();
         app.setState({countdownTime: ''});
@@ -38,7 +39,7 @@ module.exports = React.createClass({
   },
   startRaceTracking: function () {
     if(this.props.user.id === this.props.race.challenger) {
-      RaceActions.startRaceTracking(this.props.socket, this.props.Race);
+      RaceActions.startRaceTracking(this.props.socket, this.props.race);
     }
   },
   render: function() {
@@ -69,7 +70,7 @@ module.exports = React.createClass({
         START!!!
         <div style={runner}>
           <div style={lable}>Runner 1 </div>
-          <div style={amount}>1.2m</div>
+          <div style={amount}>{this.props.distance.toFixed(2)}</div>
         </div>
       </div>)
     }

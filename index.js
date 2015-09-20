@@ -96,9 +96,21 @@ io.on('connection', function (socket) {
   socket.on("challengeAccepted", function (race) {
     io.sockets.emit("readyUp");
   });
-  socket.on("startRaceTracking", function (race) {
+  socket.on("calculateDistance", function (raceMoment) {
     console.log("RACING");
-    //trackRace(race, new Date());
+    FAKETIMEITTR += 4;
+    var fakeDate = new Date("2015-09-19T16:12:20");
+    fakeDate.setSeconds(fakeDate.getSeconds() + FAKETIMEITTR);
+    console.log("BEFORE WE START", raceMoment.distance);
+    itterace(raceMoment.race, fakeDate, raceMoment.lastIttr, raceMoment.distance, function (itterationData, lastItteration, distanceData) {
+      console.log("in the call back");
+      var resultData = calculateNewDistance(itterationData, lastItteration, fakeDate, distanceData);
+      var distanceData = resultData[0]
+      var lastItteration = resultData[1];
+      console.log("DISTANCE AGAIN", distanceData)
+      console.log("ITTR AGAIN", lastItteration)
+      socket.emit('distanceCalculated', {race: raceMoment.race, distance: distanceData, lastPos: lastItteration})
+    });
   });
   socket.on("ready", function (raceID) {
     Race.readyUp(raceID, function (race) {
@@ -115,14 +127,32 @@ io.on('connection', function (socket) {
     })
   })
 });
+
+var FAKETIMEITTR = 0
+
 function getGPSData (userId, time, callBack) {
+  console.log("getGPSData");
   return new Promise(function (resolve, reject) {
     if(userId === "ghost") {
-      resolve([{"id":1,"station":1,"latitude":39.0,"latitudeMin":17.0,"latitudeSec":14.01,"latitudeDirection":"N","longitude":76.0,"longitudeMin":35.0,"longitudeSec":7.51,"longitudeDirection":"W","created":"2015-03-19T00:10:52.787455Z","owner":"Brian"}]);
+      userId = 2;
+      var altTime = time;
+      altTime.setMinutes(altTime.getMinutes() + 1);
+      console.log("ghost", altTime);
+      var url = generateURL(userId, altTime);
+      request(url, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+          console.log("got data ghost")
+          resolve(JSON.parse(body));
+        } else {
+          reject(error);
+        }
+      });
     } else {
+      console.log("user");
       var url = generateURL(userId, time);
       request(url, function (error, response, body) {
         if (!error && response.statusCode == 200) {
+          console.log("got data for user")
           resolve(JSON.parse(body));
         } else {
           reject(error);
@@ -131,54 +161,34 @@ function getGPSData (userId, time, callBack) {
     }
   });
 }
+
 function generateURL (userId, time) {
+  console.log("generateURL");
   var startTime = new Date(time);
   var endTime = new Date(time);
-  startTime.setSeconds(endTime.getSeconds() - 4);
+  startTime.setSeconds(endTime.getSeconds() - 5);
   return 'http://167.114.68.68:8080/gps/?station='+ userId +'&start='+ startTime.toISOString().replace(/\.\d\d\dZ/g, '').replace(/T/g, '%20') +'&end='+ endTime.toISOString().replace(/\.\d\d\dZ/g, '').replace(/T/g, '%20');
 }
 
-function trackRace(race, time) {
-  var lastItteration = {lastTime: time}
-  lastItteration[race.challenger] = 0; //last position
-  lastItteration[race.challenged] = 0;
-  var distanceData = {}
-  distanceData[race.challenger] = 0; //last position
-  distanceData[race.challenged] = 0;
-
-  itterace(race, time, function (itterationData) {
-    var resultData = calculateNewDistance(itterationData, lastItteration, time);
-    console.log(resultData)
-    distanceData[race.challenger] = resultData[0][race.challenger];
-    distanceData[race.challenged] = resultData[0][race.challenged];
-    lastItteration = resultData[1];
-
-    time = new Date('2015-09-19T16:16:30')
-    itterace(race, time, function (itterationData) {
-      var resultData = calculateNewDistance(itterationData, lastItteration, time);
-      console.log(resultData)
-      distanceData[race.challenger] = resultData[0][race.challenger];
-      distanceData[race.challenged] = resultData[0][race.challenged];
-      lastItteration = resultData[1];
-      console.log("END ======================");
-      console.log(JSON.stringify(distanceData));
-    });
-  });
-}
-
-function itterace(raceData, newTime, callBack) {
+function itterace(raceData, newTime, lastItteration, distanceData, callBack) {
+  console.log("itterrace");
   var itterationData = []
   _.each([raceData.challenger, raceData.challenged], function (id) {
     getGPSData(id, newTime).then(function (data) {
       itterationData.push({'id': id, 'pos': data[0]});
       if(itterationData.length > 1) {
-        callBack(itterationData, newTime);
+          console.log("got the data safe and sound");
+          console.log("ITTR ", itterationData);
+          console.log("LAST ITTR", lastItteration);
+          console.log("DISTANCE", distanceData);
+          callBack(itterationData, lastItteration, distanceData);
       }
     });
   });
 }
 
 function locationConversion(deg, min, sec, dir) {
+  console.log(deg, min, sec, dir)
   if(dir === "S" || dir === "W") {
     dir = -1
   } else {
@@ -187,23 +197,38 @@ function locationConversion(deg, min, sec, dir) {
   return dir * (deg + min/60 + sec/3600);
 }
 
-function calculateNewDistance (newItteration, lastItteration, newTime) {
-  console.log("calculating")
-  var distanceObj = {};
+function deg2rad(deg) {
+  var rad = deg * Math.PI/180
+  return rad
+}
+
+function calculateDistance (lat1, lon1, lat2, lon2) {
+  console.log("convert lon and lat to mile delta")
+  var dlat = deg2rad(lat2) - deg2rad(lat1);
+  var dlon = deg2rad(lon2) - deg2rad(lon1);
+  var distance = Math.pow(Math.sin(dlat/2),2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.pow(Math.sin(dlon/2), 2);
+  var hyp = 2 * Math.atan2(Math.sqrt(distance), Math.sqrt(1 - distance))
+  var distanceWithMile = 3959*hyp;
+  return distanceWithMile;
+}
+
+function calculateNewDistance (newItteration, lastItteration, newTime, distanceObj) {
+  console.log("calculateNewDistance")
   _.each(newItteration, function (racerObj) {
     var newLong = locationConversion(racerObj.pos.longitude, racerObj.pos.longitudeMin, racerObj.pos.longitudeSec, racerObj.pos.longitudeDirection);
     var newLat = locationConversion(racerObj.pos.latitude, racerObj.pos.latitudeMin, racerObj.pos.latitudeSec, racerObj.pos.latitudeDirection);
-    if(lastItteration[racerObj.id] === 0) {
-      distanceObj[racerObj.id] = 0;
-    } else {
+    if(lastItteration[racerObj.id] !== 0) {
+      console.log("not the first time", racerObj.id)
+      console.log("LAST ITTER", lastItteration[racerObj.id])
       var oldLong = lastItteration[racerObj.id].long;
       var oldLat = lastItteration[racerObj.id].lat;
-      distanceObj[racerObj.id] = {longDelta: newLong-oldLong, latDelta: newLat-oldLat};
+
+      console.log(distanceObj[racerObj.id]);
+      distanceObj[racerObj.id] = distanceObj[racerObj.id] + calculateDistance(newLat, newLong, oldLat, oldLong);
+      console.log(distanceObj[racerObj.id]);
     }
     lastItteration[racerObj.id] = {long: newLong, lat: newLat};
     lastItteration.lastTime = newTime;
   });
   return [distanceObj, lastItteration];
 }
-
-trackRace({challenger: 1, challenged: 2}, new Date('2015-09-19T16:12:23'));

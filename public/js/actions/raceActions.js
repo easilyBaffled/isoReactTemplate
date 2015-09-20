@@ -27,9 +27,16 @@ var RaceActions = Flux.createActions({
         }
     },
     startRaceTracking: function (socket, race) {
-        socket.emit("startRaceTracking", race);
+        var distanceObj = {};
+        distanceObj[race.challenger] = 0;
+        distanceObj[race.challenged] = 0;
+
+        var lastItteration = {}
+        lastItteration[race.challenger] = 0; //last position
+        lastItteration[race.challenged] = 0;
+        socket.emit('calculateDistance', {race: race, distance: distanceObj, lastIttr: lastItteration});
         return {
-            actionType: "TRACKING_RACE"            
+            actionType: "TRACKING_RACE"
         }
     }
 });

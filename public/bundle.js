@@ -54,7 +54,7 @@
 /******/ 	
 /******/ 	
 /******/ 	var hotApplyOnUpdate = true;
-/******/ 	var hotCurrentHash = "50be6de0b6bf271464e8"; // eslint-disable-line no-unused-vars
+/******/ 	var hotCurrentHash = "3c2aa2a62f16e4106c92"; // eslint-disable-line no-unused-vars
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentParents = []; // eslint-disable-line no-unused-vars
 /******/ 	
@@ -30500,6 +30500,7 @@
 	    raceDistance: 0,
 	    readyUp: false,
 	    racing: false,
+	    prevDistance: 0
 	  }
 	}
 	module.exports = React.createClass({displayName: "module.exports",
@@ -30525,10 +30526,49 @@
 	    socket.on('challengeDeclined', function () {
 	      console.log("Your Challenge Has Been declined");
 	    });
-
 	    socket.on('raceCreatedAndReadyUp', function (race) {
 	      app.setState({readyUp: true});
 	      RaceActions.raceCreated(race);
+	    });
+	    socket.on('distanceCalculated', function (raceMoment) {      
+	      var endRace = false;
+	      if(app.state.prevDistance === 0) {
+	        app.setState({prevDistance: raceMoment.distance})
+	      } else {
+	        var challengerOldDistance = app.state.prevDistance[app.state.Race.challenger];
+	        var challengedOldDistance = app.state.prevDistance[app.state.Race.challenged];
+	        var challengerNewDistance = raceMoment.distance[app.state.Race.challenger];
+	        var challengedNewDistance = raceMoment.distance[app.state.Race.challenged];
+
+	        if(challengerOldDistance < challengedOldDistance && challengerNewDistance > challengedNewDistance) {
+	          console.log("lead change")
+	          if(app.state.Race.challenger === app.state.User.id) {
+	            var utterance = new SpeechSynthesisUtterance('Took The Lead');
+	            window.speechSynthesis.speak(utterance);
+	          }
+	        } else if(challengerOldDistance > challengedOldDistance && challengerNewDistance < challengedNewDistance) {
+	            console.log("lead change")
+	          if(app.state.Race.challenger === app.state.User.id) {
+	            var utterance = new SpeechSynthesisUtterance('Lost The Lead');
+	            window.speechSynthesis.speak(utterance);
+	          }
+	        }
+	      }
+	      _.each(raceMoment.distance, function (distance, userId) {
+	        if(userId === app.state.User.id) {
+	            app.setState({raceDistance: distance});
+	        }
+	        if(parseFloat(raceMoment.race.distance) <= distance) {
+	          endRace = true;
+	        }
+	      });
+	      if(endRace) {
+	        console.log("You won go home");
+	      } else {
+	        setTimeout(function () {
+	          socket.emit('calculateDistance', {race: raceMoment.race, distance: raceMoment.distance, lastIttr: raceMoment.lastPos});
+	        }, 500);
+	      }
 	    });
 	    socket.on('readyUp', function () {
 	      app.setState({readyUp: true});
@@ -30558,7 +30598,6 @@
 	  },
 	  readyUp: function () {
 	    this.setState({readyUp: false});
-	    console.log(this.state.Race);
 	    UserActions.readyUp(socket, this.state.Race);
 	  },
 	  render: function() {
@@ -30590,7 +30629,7 @@
 	      } else if (this.state.racing) {
 	        htmlToRender =
 	        (React.createElement("div", null, 
-	          React.createElement(Race, {race: this.state.Race, user: this.state.User, socket: socket})
+	          React.createElement(Race, {race: this.state.Race, distance: this.state.raceDistance, user: this.state.User, socket: socket})
 	        ))
 	      } else {
 	        htmlToRender =
@@ -45312,9 +45351,16 @@
 	        }
 	    },
 	    startRaceTracking: function (socket, race) {
-	        socket.emit("startRaceTracking", race);
+	        var distanceObj = {};
+	        distanceObj[race.challenger] = 0;
+	        distanceObj[race.challenged] = 0;
+
+	        var lastItteration = {}
+	        lastItteration[race.challenger] = 0; //last position
+	        lastItteration[race.challenged] = 0;
+	        socket.emit('calculateDistance', {race: race, distance: distanceObj, lastIttr: lastItteration});
 	        return {
-	            actionType: "TRACKING_RACE"            
+	            actionType: "TRACKING_RACE"
 	        }
 	    }
 	});
@@ -45475,6 +45521,7 @@
 	      if(diff > 0) {
 	          app.setState({countdownTime: Math.round(diff)});
 	      } else {
+	        console.log("==============")
 	        clearInterval(interval);
 	        app.startRaceTracking();
 	        app.setState({countdownTime: ''});
@@ -45483,7 +45530,7 @@
 	  },
 	  startRaceTracking: function () {
 	    if(this.props.user.id === this.props.race.challenger) {
-	      RaceActions.startRaceTracking(this.props.socket, this.props.Race);
+	      RaceActions.startRaceTracking(this.props.socket, this.props.race);
 	    }
 	  },
 	  render: function() {
@@ -45514,7 +45561,7 @@
 	        "START!!!", 
 	        React.createElement("div", {style: runner}, 
 	          React.createElement("div", {style: lable}, "Runner 1 "), 
-	          React.createElement("div", {style: amount}, "1.2m")
+	          React.createElement("div", {style: amount}, this.props.distance.toFixed(2))
 	        )
 	      ))
 	    }

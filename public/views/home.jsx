@@ -22,6 +22,7 @@ function getState(){
     raceDistance: 0,
     readyUp: false,
     racing: false,
+    prevDistance: 0
   }
 }
 module.exports = React.createClass({
@@ -47,10 +48,49 @@ module.exports = React.createClass({
     socket.on('challengeDeclined', function () {
       console.log("Your Challenge Has Been declined");
     });
-
     socket.on('raceCreatedAndReadyUp', function (race) {
       app.setState({readyUp: true});
       RaceActions.raceCreated(race);
+    });
+    socket.on('distanceCalculated', function (raceMoment) {      
+      var endRace = false;
+      if(app.state.prevDistance === 0) {
+        app.setState({prevDistance: raceMoment.distance})
+      } else {
+        var challengerOldDistance = app.state.prevDistance[app.state.Race.challenger];
+        var challengedOldDistance = app.state.prevDistance[app.state.Race.challenged];
+        var challengerNewDistance = raceMoment.distance[app.state.Race.challenger];
+        var challengedNewDistance = raceMoment.distance[app.state.Race.challenged];
+
+        if(challengerOldDistance < challengedOldDistance && challengerNewDistance > challengedNewDistance) {
+          console.log("lead change")
+          if(app.state.Race.challenger === app.state.User.id) {
+            var utterance = new SpeechSynthesisUtterance('Took The Lead');
+            window.speechSynthesis.speak(utterance);
+          }
+        } else if(challengerOldDistance > challengedOldDistance && challengerNewDistance < challengedNewDistance) {
+            console.log("lead change")
+          if(app.state.Race.challenger === app.state.User.id) {
+            var utterance = new SpeechSynthesisUtterance('Lost The Lead');
+            window.speechSynthesis.speak(utterance);
+          }
+        }
+      }
+      _.each(raceMoment.distance, function (distance, userId) {
+        if(userId === app.state.User.id) {
+            app.setState({raceDistance: distance});
+        }
+        if(parseFloat(raceMoment.race.distance) <= distance) {
+          endRace = true;
+        }
+      });
+      if(endRace) {
+        console.log("You won go home");
+      } else {
+        setTimeout(function () {
+          socket.emit('calculateDistance', {race: raceMoment.race, distance: raceMoment.distance, lastIttr: raceMoment.lastPos});
+        }, 500);
+      }
     });
     socket.on('readyUp', function () {
       app.setState({readyUp: true});
@@ -80,7 +120,6 @@ module.exports = React.createClass({
   },
   readyUp: function () {
     this.setState({readyUp: false});
-    console.log(this.state.Race);
     UserActions.readyUp(socket, this.state.Race);
   },
   render: function() {
@@ -112,7 +151,7 @@ module.exports = React.createClass({
       } else if (this.state.racing) {
         htmlToRender =
         (<div>
-          <Race race={this.state.Race} user={this.state.User} socket={socket}></Race>
+          <Race race={this.state.Race} distance={this.state.raceDistance} user={this.state.User} socket={socket}></Race>
         </div>)
       } else {
         htmlToRender =
